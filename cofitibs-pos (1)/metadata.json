@@ -1,7 +1,0 @@
-{
-  "name": "Cofitibs POS",
-  "description": "A professional coffee shop terminal and inventory management system. Features local-first data persistence, manual backup systems, and responsive prep-room queueing.",
-  "requestFramePermissions": [
-    "camera"
-  ]
-}
