@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Order } from '../types';
 
@@ -30,9 +29,14 @@ const QueueView: React.FC<QueueViewProps> = ({ orders, onComplete }) => {
                 {/* Status Header */}
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <span className="inline-block px-3 py-1 bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest rounded-full border border-amber-100 mb-2">
-                      Preparing
-                    </span>
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-block px-3 py-1 bg-amber-50 text-amber-600 text-[9px] font-black uppercase tracking-widest rounded-full border border-amber-100">
+                        Preparing
+                      </span>
+                      <span className={`inline-block px-3 py-1 text-[9px] font-black uppercase tracking-widest rounded-full border ${order.type === 'event' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'}`}>
+                        {order.type === 'event' ? 'Event Mode' : 'Normal Mode'}
+                      </span>
+                    </div>
                     <h3 className="text-lg font-black text-slate-800 brand-font">{order.customerName}</h3>
                     <p className="text-[10px] font-bold text-slate-400 uppercase">#{order.id} • {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                   </div>

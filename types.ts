@@ -18,6 +18,7 @@ export interface Order {
   total: number;
   timestamp: number;
   status: 'queue' | 'done';
+  type: 'normal' | 'event';
 }
 
 export interface InventoryLog {
@@ -28,4 +29,11 @@ export interface InventoryLog {
   timestamp: number;
 }
 
-export type View = 'pos' | 'inventory' | 'history' | 'queue';
+export interface EventConfig {
+  id: string;
+  remainingCups: number;
+  maxCups: number;
+  isActive: boolean;
+}
+
+export type View = 'pos' | 'event' | 'inventory' | 'history' | 'queue';

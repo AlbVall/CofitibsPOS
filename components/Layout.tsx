@@ -1,5 +1,6 @@
 import React from 'react';
 import { View } from '../types';
+import { logOut, auth } from '../services/firebase';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,10 +11,17 @@ interface LayoutProps {
 const Layout: React.FC<LayoutProps> = ({ children, activeView, setView }) => {
   const navItems = [
     { id: 'pos', icon: 'fa-cash-register', label: 'Orders' },
+    { id: 'event', icon: 'fa-calendar-check', label: 'Event Mode' },
     { id: 'queue', icon: 'fa-mug-hot', label: 'Prep Room' },
     { id: 'inventory', icon: 'fa-boxes-stacked', label: 'Inventory' },
     { id: 'history', icon: 'fa-clock-rotate-left', label: 'History' },
   ];
+
+  const handleLogout = () => {
+    if (confirm('Are you sure you want to sign out?')) {
+      logOut();
+    }
+  };
 
   return (
     <div className="flex h-screen w-full bg-[#f8fafc] overflow-hidden text-slate-800">
@@ -30,7 +38,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView }) => {
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2">
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
           {navItems.map((item) => (
             <button
               key={item.id}
@@ -48,14 +56,21 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView }) => {
         </nav>
 
         <div className="p-6 mt-auto border-t border-slate-100">
-          <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs shadow-sm">
-              S
+          <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-2xl group relative">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-xs shadow-sm uppercase">
+              {auth.currentUser?.email?.[0] || 'S'}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-xs font-bold truncate">Staff User</p>
+              <p className="text-xs font-bold truncate">{auth.currentUser?.email?.split('@')[0] || 'Staff User'}</p>
               <p className="text-[10px] text-slate-400">Main Branch</p>
             </div>
+            <button 
+              onClick={handleLogout}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
+              title="Logout"
+            >
+              <i className="fas fa-sign-out-alt text-sm"></i>
+            </button>
           </div>
         </div>
       </aside>
@@ -69,7 +84,12 @@ const Layout: React.FC<LayoutProps> = ({ children, activeView, setView }) => {
             <div className="brand-font font-bold text-lg text-emerald-900">Cofitibs</div>
           </div>
           <div className="flex items-center gap-3">
-             <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-500 bg-emerald-50 px-2 py-1 rounded-md">Live</span>
+             <button 
+               onClick={handleLogout}
+               className="text-[10px] font-bold uppercase tracking-widest text-slate-400 bg-slate-50 px-3 py-1.5 rounded-md"
+             >
+               Sign Out
+             </button>
           </div>
         </header>
 
