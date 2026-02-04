@@ -41,6 +41,17 @@ const App: React.FC = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      
+      // Accuracy Improvement: Clear sensitive states immediately on logout
+      if (!currentUser) {
+        setProducts([]);
+        setOrders([]);
+        setCart([]);
+        setCustomerName('');
+        setEventConfig({ id: 'event_mode', remainingCups: 0, maxCups: 0, isActive: false });
+        setActiveView('pos'); // Reset view to default
+      }
+      
       setAuthLoading(false);
     });
     return () => unsubscribe();
@@ -111,7 +122,8 @@ const App: React.FC = () => {
       total,
       timestamp: Date.now(),
       status: 'queue',
-      type: orderType
+      type: orderType,
+      createdBy: auth.currentUser?.email || 'Unknown'
     };
 
     if (db) {
@@ -136,7 +148,11 @@ const App: React.FC = () => {
   const handleCompleteOrder = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (order && db) {
-      saveOrderToCloud({ ...order, status: 'done' });
+      saveOrderToCloud({ 
+        ...order, 
+        status: 'done',
+        completedBy: auth.currentUser?.email || 'Unknown'
+      });
     }
   };
 
@@ -295,7 +311,7 @@ const App: React.FC = () => {
                  </div>
                </div>
             </div>
-            <div className="flex-1 min-h-0 overflow-y-auto space-y-3 custom-scrollbar">
+            <div className="flex-1 min-h-0 overflow-y-auto space-y-4 custom-scrollbar">
               {filteredHistoryOrders.length === 0 ? (
                 <div className="h-64 flex flex-col items-center justify-center text-slate-300">
                   <div className="w-20 h-20 bg-slate-50 rounded-[2rem] flex items-center justify-center mb-4">
@@ -304,31 +320,57 @@ const App: React.FC = () => {
                   <p className="text-[10px] font-black uppercase tracking-widest">No matching history found</p>
                 </div>
               ) : filteredHistoryOrders.map(order => (
-                <div key={order.id} className="bg-white p-5 rounded-[1.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${order.type === 'event' ? 'bg-indigo-50 text-indigo-500' : 'bg-emerald-50 text-emerald-500'}`}>
-                       <i className={`fas ${order.type === 'event' ? 'fa-calendar-star' : 'fa-check'} text-sm`}></i>
+                <div key={order.id} className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300 group">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${order.type === 'event' ? 'bg-indigo-50 text-indigo-500' : 'bg-emerald-50 text-emerald-500'}`}>
+                         <i className={`fas ${order.type === 'event' ? 'fa-calendar-star' : 'fa-check'} text-lg`}></i>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-bold text-slate-900 text-lg leading-none">{order.customerName}</div>
+                          <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${order.type === 'event' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                            {order.type === 'event' ? 'Event' : 'Normal'}
+                          </span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+                          {new Date(order.timestamp).toLocaleDateString()} • {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <div className="font-bold text-slate-900">{order.customerName}</div>
-                        <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${order.type === 'event' ? 'bg-indigo-100 text-indigo-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                          {order.type === 'event' ? 'Event' : 'Normal'}
-                        </span>
-                      </div>
-                      <div className="text-[10px] text-slate-400 font-medium">
-                        {new Date(order.timestamp).toLocaleDateString()} at {new Date(order.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
+                    <div className="md:text-right shrink-0">
+                       <p className="text-2xl font-black text-emerald-900 leading-none">₱{order.total.toLocaleString()}</p>
+                       <p className="text-[8px] font-black uppercase tracking-widest text-slate-300 mt-1">Ref #{order.id}</p>
                     </div>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs text-slate-500 line-clamp-1 italic font-medium">
+
+                  <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100/50">
+                    <p className="text-xs text-slate-600 font-medium italic">
                       {order.items.map(i => `${i.quantity}x ${i.name}`).join(', ')}
                     </p>
                   </div>
-                  <div className="md:text-right shrink-0">
-                     <p className="text-lg font-black text-emerald-900 leading-none">₱{order.total.toLocaleString()}</p>
-                     <p className="text-[8px] font-black uppercase tracking-widest text-slate-300 mt-1">Ref #{order.id}</p>
+
+                  <div className="flex flex-wrap items-center gap-6 pt-2 border-t border-slate-50">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400">
+                        <i className="fas fa-user-pen text-[10px]"></i>
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Placed By</span>
+                        <span className="text-[10px] font-bold text-slate-700">{order.createdBy?.split('@')[0] || 'Unknown Staff'}</span>
+                      </div>
+                    </div>
+                    {order.completedBy && (
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-500">
+                          <i className="fas fa-user-check text-[10px]"></i>
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Completed By</span>
+                          <span className="text-[10px] font-bold text-emerald-700">{order.completedBy?.split('@')[0] || 'Unknown Staff'}</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

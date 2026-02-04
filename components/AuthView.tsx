@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { 
   auth, 
-  User 
+  User,
+  logOut
 } from '../services/firebase';
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  sendEmailVerification,
-  signOut
+  sendEmailVerification
 } from '@firebase/auth';
 
 interface AuthViewProps {
@@ -81,7 +81,7 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
               {loading ? 'Sending...' : 'Resend Link'}
             </button>
             <button 
-              onClick={() => signOut(auth)}
+              onClick={() => logOut()}
               className="w-full py-3 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-rose-500 transition-all"
             >
               Back to Login
@@ -101,7 +101,7 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
               <i className="fas fa-dog text-white text-3xl"></i>
             </div>
             <h1 className="text-3xl font-black text-white brand-font tracking-tight">Cofitibs<span className="text-emerald-400">.</span></h1>
-            <p className="text-emerald-300/60 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Professional Terminal</p>
+            <p className="text-emerald-300/60 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Life happens. Coffee helps.</p>
           </div>
           {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-800 rounded-full opacity-20"></div>
@@ -171,7 +171,7 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  {isLogin ? 'Access Terminal' : 'Create Account'}
+                  {isLogin ? 'Sign in' : 'Create Account'}
                   <i className="fas fa-arrow-right-long text-xs"></i>
                 </>
               )}

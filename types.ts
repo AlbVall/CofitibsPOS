@@ -19,6 +19,8 @@ export interface Order {
   timestamp: number;
   status: 'queue' | 'done';
   type: 'normal' | 'event';
+  createdBy?: string;
+  completedBy?: string;
 }
 
 export interface InventoryLog {

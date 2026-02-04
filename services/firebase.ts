@@ -48,7 +48,13 @@ export { db, auth, analytics };
 export { onAuthStateChanged };
 export type { User };
 
-export const logOut = () => signOut(auth);
+export const logOut = async () => {
+  try {
+    await signOut(auth);
+  } catch (error) {
+    console.error("Logout Error:", error);
+  }
+};
 
 // Firestore Helpers
 export const saveOrderToCloud = async (order: Order) => {
