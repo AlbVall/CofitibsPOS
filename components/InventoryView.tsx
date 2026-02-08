@@ -25,6 +25,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    unitCost: '',
     category: 'Hot Coffee',
     stock: '',
     image: ''
@@ -35,12 +36,13 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
       setFormData({
         name: editingProduct.name,
         price: editingProduct.price.toString(),
+        unitCost: (editingProduct.unitCost || 0).toString(),
         category: editingProduct.category,
         stock: editingProduct.stock.toString(),
         image: editingProduct.image
       });
     } else {
-      setFormData({ name: '', price: '', category: 'Hot Coffee', stock: '', image: '' });
+      setFormData({ name: '', price: '', unitCost: '', category: 'Hot Coffee', stock: '', image: '' });
     }
     // Reset camera state when modal opens/closes
     return () => stopCamera();
@@ -157,6 +159,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
       id: editingProduct ? editingProduct.id : Math.random().toString(36).substr(2, 9),
       name: formData.name,
       price: parseFloat(formData.price),
+      unitCost: parseFloat(formData.unitCost) || 0,
       category: formData.category,
       stock: parseInt(formData.stock) || 0,
       image: formData.image || 'https://via.placeholder.com/200?text=No+Image',
@@ -249,7 +252,10 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{product.category}</span>
                   </div>
                   <h3 className="font-bold text-slate-800 text-sm truncate">{product.name}</h3>
-                  <p className="text-xs font-black text-emerald-800 mt-1">₱{product.price.toLocaleString()}</p>
+                  <div className="flex flex-col">
+                    <p className="text-xs font-black text-emerald-800 mt-1">SRP: ₱{product.price.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-400">Cost: ₱{product.unitCost?.toLocaleString() || 0}</p>
+                  </div>
                 </div>
                 
                 {/* Mobile Management Action */}
@@ -276,7 +282,8 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
               <tr>
                 <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest">Item Description</th>
                 <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest">Category</th>
-                <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest text-center">Unit Price</th>
+                <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest text-center">Unit Cost</th>
+                <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest text-center">Retail Price</th>
                 <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest">Quantity</th>
                 <th className="px-10 py-6 font-black text-slate-400 uppercase text-[10px] tracking-widest text-right">Actions</th>
               </tr>
@@ -286,6 +293,7 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
                 <tr key={product.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-10 py-5 text-sm font-bold text-slate-800"><div className="flex items-center gap-4"><img src={product.image} className="w-12 h-12 rounded-xl object-cover" />{product.name}</div></td>
                   <td className="px-10 py-5"><span className="text-xs font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">{product.category}</span></td>
+                  <td className="px-10 py-5 text-center font-black text-slate-400">₱{product.unitCost?.toLocaleString() || 0}</td>
                   <td className="px-10 py-5 text-center font-black">₱{product.price.toLocaleString()}</td>
                   <td className="px-10 py-5"><div className="flex items-center gap-3"><span className={`w-10 font-black ${product.stock < 15 ? 'text-amber-500' : 'text-slate-700'}`}>{product.stock}</span><div className="h-1.5 w-24 bg-slate-100 rounded-full"><div className="h-full bg-emerald-500 rounded-full" style={{width: `${Math.min(100, product.stock)}%`}}></div></div></div></td>
                   <td className="px-10 py-5 text-right">
@@ -366,8 +374,9 @@ const InventoryView: React.FC<InventoryViewProps> = ({ products, onUpdateStock, 
               <div className="grid grid-cols-2 gap-4">
                 <div className="col-span-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Item Name</label><input required type="text" value={formData.name} onChange={e => setFormData(prev => ({...prev, name: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" /></div>
                 <div className="col-span-2 md:col-span-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Category</label><select required value={formData.category} onChange={e => setFormData(prev => ({...prev, category: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold appearance-none">{PREDEFINED_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                <div className="col-span-2 md:col-span-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Unit Price (₱)</label><input required type="number" step="0.01" value={formData.price} onChange={e => setFormData(prev => ({...prev, price: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" /></div>
-                <div className="col-span-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Available Quantity</label><input required type="number" value={formData.stock} onChange={e => setFormData(prev => ({...prev, stock: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" /></div>
+                <div className="col-span-2 md:col-span-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Retail Price (₱)</label><input required type="number" step="0.01" value={formData.price} onChange={e => setFormData(prev => ({...prev, price: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" /></div>
+                <div className="col-span-2 md:col-span-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Unit Cost (₱)</label><input required type="number" step="0.01" value={formData.unitCost} onChange={e => setFormData(prev => ({...prev, unitCost: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold placeholder:text-slate-300" placeholder="0.00" /></div>
+                <div className="col-span-2 md:col-span-1"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Available Quantity</label><input required type="number" value={formData.stock} onChange={e => setFormData(prev => ({...prev, stock: e.target.value}))} className="w-full px-5 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold" /></div>
               </div>
               
               <div className="flex flex-col gap-3">

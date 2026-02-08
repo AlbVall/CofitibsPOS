@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useEffect } from 'react';
 import { Product, Order } from '../types';
 import { getInventoryInsights } from '../services/geminiService';
@@ -36,16 +35,23 @@ const InsightsView: React.FC<InsightsViewProps> = ({ products, orders }) => {
     const totalOrders = orders.length;
     const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
-    const productSales: Record<string, { name: string; qty: number; revenue: number; image: string }> = {};
+    // Calculate profit using unitCost if available
+    let totalEstimatedProfit = 0;
+
+    const productSales: Record<string, { name: string; qty: number; revenue: number; profit: number; image: string }> = {};
     const categorySales: Record<string, number> = {};
 
     orders.forEach(order => {
       order.items.forEach(item => {
+        const itemProfit = (item.price - (item.unitCost || 0)) * item.quantity;
+        totalEstimatedProfit += itemProfit;
+
         if (!productSales[item.id]) {
-          productSales[item.id] = { name: item.name, qty: 0, revenue: 0, image: item.image };
+          productSales[item.id] = { name: item.name, qty: 0, revenue: 0, profit: 0, image: item.image };
         }
         productSales[item.id].qty += item.quantity;
         productSales[item.id].revenue += item.quantity * item.price;
+        productSales[item.id].profit += itemProfit;
         categorySales[item.category] = (categorySales[item.category] || 0) + (item.quantity * item.price);
       });
     });
@@ -61,6 +67,7 @@ const InsightsView: React.FC<InsightsViewProps> = ({ products, orders }) => {
       totalRevenue,
       totalOrders,
       avgOrderValue,
+      totalEstimatedProfit,
       topProducts,
       sortedCategories,
       maxProductQty: topProducts.length > 0 ? topProducts[0].qty : 1
@@ -71,7 +78,7 @@ const InsightsView: React.FC<InsightsViewProps> = ({ products, orders }) => {
     <div className="h-full overflow-y-auto p-4 md:p-8 bg-[#fbfcfd] custom-scrollbar">
       <div className="mb-8">
         <h2 className="text-3xl font-bold text-emerald-900 tracking-tight brand-font">Business Dashboard</h2>
-        <p className="text-slate-500 mt-1 font-medium">Monitoring Bark & Brew performance.</p>
+        <p className="text-slate-500 mt-1 font-medium">Monitoring Cofitibs performance.</p>
       </div>
 
       {/* AI Business Advisor Section */}
@@ -126,19 +133,19 @@ const InsightsView: React.FC<InsightsViewProps> = ({ products, orders }) => {
         </div>
 
         <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center mb-4">
+            <i className="fas fa-hand-holding-dollar text-xl"></i>
+          </div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Est. Gross Profit</p>
+          <p className="text-3xl font-black text-rose-600">₱{analytics.totalEstimatedProfit.toLocaleString()}</p>
+        </div>
+
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4">
             <i className="fas fa-shopping-bag text-xl"></i>
           </div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Total Orders</p>
           <p className="text-3xl font-black text-slate-900">{analytics.totalOrders}</p>
-        </div>
-
-        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-2xl bg-purple-50 text-purple-600 flex items-center justify-center mb-4">
-            <i className="fas fa-chart-pie text-xl"></i>
-          </div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400 mb-1">Avg. Ticket</p>
-          <p className="text-3xl font-black text-slate-900">₱{analytics.avgOrderValue.toLocaleString(undefined, { maximumFractionDigits: 2 })}</p>
         </div>
       </div>
 

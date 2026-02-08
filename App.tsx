@@ -32,6 +32,7 @@ const App: React.FC = () => {
   // History Filters
   const [historyDateFilter, setHistoryDateFilter] = useState<string>('');
   const [historyTypeFilter, setHistoryTypeFilter] = useState<'all' | 'normal' | 'event'>('all');
+  const [historySearchTerm, setHistorySearchTerm] = useState<string>('');
 
   // Persistent Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -183,6 +184,12 @@ const App: React.FC = () => {
       if (o.status !== 'done') return false;
       const effectiveType = o.type || 'normal';
       if (historyTypeFilter !== 'all' && effectiveType !== historyTypeFilter) return false;
+      
+      // Search term filter
+      if (historySearchTerm && !o.customerName.toLowerCase().includes(historySearchTerm.toLowerCase())) {
+        return false;
+      }
+
       if (historyDateFilter) {
         const d = new Date(o.timestamp);
         const year = d.getFullYear();
@@ -193,7 +200,7 @@ const App: React.FC = () => {
       }
       return true;
     });
-  }, [orders, historyDateFilter, historyTypeFilter]);
+  }, [orders, historyDateFilter, historyTypeFilter, historySearchTerm]);
 
   const historyTotalSales = useMemo(() => {
     return filteredHistoryOrders.reduce((sum, o) => sum + o.total, 0);
@@ -274,6 +281,20 @@ const App: React.FC = () => {
                    </div>
                  </div>
                  <div className="flex flex-wrap items-center gap-2 bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm transition-all">
+                    {/* History Search Bar */}
+                    <div className="relative flex items-center min-w-[140px] md:min-w-[200px]">
+                      <i className="fas fa-search absolute left-3 text-[10px] text-slate-300 pointer-events-none"></i>
+                      <input 
+                        type="text" 
+                        placeholder="Search Guest Name..."
+                        value={historySearchTerm}
+                        onChange={(e) => setHistorySearchTerm(e.target.value)}
+                        className="pl-8 pr-3 py-1.5 bg-slate-50 border-none rounded-xl text-[10px] font-black uppercase outline-none w-full focus:ring-1 focus:ring-emerald-500/20"
+                      />
+                    </div>
+                    
+                    <div className="w-px h-6 bg-slate-100 hidden sm:block"></div>
+                    
                     <div className="relative flex items-center">
                       <i className="fas fa-calendar absolute left-3 text-[10px] text-slate-300 pointer-events-none"></i>
                       <input 
@@ -299,9 +320,13 @@ const App: React.FC = () => {
                         </button>
                       ))}
                     </div>
-                    {(historyDateFilter || historyTypeFilter !== 'all') && (
+                    {(historyDateFilter || historyTypeFilter !== 'all' || historySearchTerm) && (
                       <button 
-                        onClick={() => { setHistoryDateFilter(''); setHistoryTypeFilter('all'); }}
+                        onClick={() => { 
+                          setHistoryDateFilter(''); 
+                          setHistoryTypeFilter('all'); 
+                          setHistorySearchTerm(''); 
+                        }}
                         className="w-7 h-7 flex items-center justify-center text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors border border-rose-50"
                         title="Clear all filters"
                       >

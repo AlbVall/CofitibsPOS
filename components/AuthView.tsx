@@ -7,7 +7,9 @@ import {
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  sendEmailVerification
+  sendEmailVerification,
+  GoogleAuthProvider,
+  signInWithPopup
 } from '@firebase/auth';
 
 interface AuthViewProps {
@@ -20,7 +22,6 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [verificationSent, setVerificationSent] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,7 +34,6 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
       } else {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(userCredential.user);
-        setVerificationSent(true);
       }
     } catch (err: any) {
       console.error(err);
@@ -43,12 +43,35 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setLoading(true);
+    try {
+      const provider = new GoogleAuthProvider();
+      // Optional: Force account selection
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithPopup(auth, provider);
+    } catch (err: any) {
+      console.error(err);
+      if (err.code !== 'auth/popup-closed-by-user') {
+        setError(err.message.replace('Firebase:', ''));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const resendVerification = async () => {
     if (user) {
       setLoading(true);
-      await sendEmailVerification(user);
-      setLoading(false);
-      alert('Verification email resent!');
+      try {
+        await sendEmailVerification(user);
+        alert('Verification email resent!');
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -95,7 +118,7 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fbfcfd] p-6">
       <div className="bg-white w-full max-w-md overflow-hidden rounded-[3rem] border border-slate-100 shadow-2xl flex flex-col">
-        <div className="bg-emerald-900 p-10 text-center relative overflow-hidden">
+        <div className="bg-emerald-900 p-10 text-center relative overflow-hidden shrink-0">
           <div className="relative z-10">
             <div className="w-16 h-16 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center mx-auto mb-4 border border-white/20">
               <i className="fas fa-dog text-white text-3xl"></i>
@@ -103,7 +126,6 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             <h1 className="text-3xl font-black text-white brand-font tracking-tight">Cofitibs<span className="text-emerald-400">.</span></h1>
             <p className="text-emerald-300/60 text-[10px] font-black uppercase tracking-[0.3em] mt-2">Life happens. Coffee helps.</p>
           </div>
-          {/* Decorative circles */}
           <div className="absolute -top-10 -right-10 w-40 h-40 bg-emerald-800 rounded-full opacity-20"></div>
           <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-800 rounded-full opacity-20"></div>
         </div>
@@ -177,9 +199,28 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
               )}
             </button>
           </form>
+
+          {/* Social Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100"></span></div>
+            <div className="relative flex justify-center text-[9px] uppercase font-black tracking-[0.2em] text-slate-300">
+              <span className="bg-white px-4">Or continue with</span>
+            </div>
+          </div>
+
+          {/* Google Sign In Button */}
+          <button 
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={loading}
+            className="w-full py-4 bg-white border border-slate-200 text-slate-600 rounded-3xl font-black text-xs uppercase tracking-widest shadow-sm hover:bg-slate-50 transition-all flex items-center justify-center gap-3 active:scale-95 disabled:opacity-50"
+          >
+            <i className="fab fa-google text-rose-500"></i>
+            Google Account
+          </button>
           
           {!isLogin && (
-            <p className="mt-6 text-[9px] text-center font-bold text-slate-400 uppercase tracking-widest px-4">
+            <p className="mt-6 text-[9px] text-center font-bold text-slate-400 uppercase tracking-widest px-4 leading-relaxed">
               By creating an account, you agree to our Internal Staff Policy.
             </p>
           )}
