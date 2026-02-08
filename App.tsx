@@ -36,10 +36,6 @@ const App: React.FC = () => {
   const [profileName, setProfileName] = useState('');
   const [profileImage, setProfileImage] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
-  const [isProfileCameraActive, setIsProfileCameraActive] = useState(false);
-  const profileVideoRef = useRef<HTMLVideoElement>(null);
-  const profileCanvasRef = useRef<HTMLCanvasElement>(null);
-  const profileFileInputRef = useRef<HTMLInputElement>(null);
 
   // History Filters
   const [historyDateFilter, setHistoryDateFilter] = useState<string>('');
@@ -50,28 +46,6 @@ const App: React.FC = () => {
   // Persistent Cart State
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState('');
-
-  // Utility: Resize image to thumbnail. Since we use Firebase Storage now,
-  // we can afford a slightly higher quality and size than the Auth limit allowed.
-  const resizeToThumbnail = (dataUrl: string, size: number = 256): Promise<string> => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = document.createElement('canvas');
-        canvas.width = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          const minDim = Math.min(img.width, img.height);
-          const sx = (img.width - minDim) / 2;
-          const sy = (img.height - minDim) / 2;
-          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
-        }
-        resolve(canvas.toDataURL('image/jpeg', 0.8));
-      };
-      img.src = dataUrl;
-    });
-  };
 
   // Auth Listener
   useEffect(() => {
@@ -236,8 +210,8 @@ const App: React.FC = () => {
     try {
       if (auth.currentUser) {
         const cleanName = profileName.trim();
-        // updateStaffProfile now handles the Storage upload internally
-        await updateStaffProfile(cleanName, profileImage);
+        const cleanURL = profileImage.trim();
+        await updateStaffProfile(cleanName, cleanURL);
         
         await auth.currentUser.reload();
         setUser({ ...auth.currentUser } as User);
@@ -248,61 +222,6 @@ const App: React.FC = () => {
       alert(`Error updating profile: ${err.message || "Unknown error"}`);
     } finally {
       setIsProfileSaving(false);
-    }
-  };
-
-  const startProfileCamera = async () => {
-    setIsProfileCameraActive(true);
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        video: { facingMode: 'user' }, 
-        audio: false 
-      });
-      if (profileVideoRef.current) {
-        profileVideoRef.current.srcObject = stream;
-      }
-    } catch (err) {
-      console.error("Camera access denied:", err);
-      setIsProfileCameraActive(false);
-      alert("Please allow camera access to take a profile photo.");
-    }
-  };
-
-  const stopProfileCamera = () => {
-    if (profileVideoRef.current && profileVideoRef.current.srcObject) {
-      const tracks = (profileVideoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach(track => track.stop());
-      profileVideoRef.current.srcObject = null;
-    }
-    setIsProfileCameraActive(false);
-  };
-
-  const captureProfilePhoto = async () => {
-    if (profileVideoRef.current && profileCanvasRef.current) {
-      const video = profileVideoRef.current;
-      const canvas = profileCanvasRef.current;
-      const context = canvas.getContext('2d');
-      
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const rawData = canvas.toDataURL('image/jpeg', 0.9);
-      
-      const thumbnail = await resizeToThumbnail(rawData, 256);
-      setProfileImage(thumbnail);
-      stopProfileCamera();
-    }
-  };
-
-  const handleProfileFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = async () => {
-        const thumbnail = await resizeToThumbnail(reader.result as string, 256);
-        setProfileImage(thumbnail);
-      };
-      reader.readAsDataURL(file);
     }
   };
 
@@ -588,11 +507,11 @@ const App: React.FC = () => {
       {/* Profile Edit Modal */}
       {isProfileModalOpen && (
         <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={() => { stopProfileCamera(); setIsProfileModalOpen(false); }}></div>
+          <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-md" onClick={() => { setIsProfileModalOpen(false); }}></div>
           <div className="relative bg-white w-full max-w-md rounded-[3rem] p-8 shadow-2xl animate-in zoom-in duration-200 overflow-hidden">
             <div className="flex justify-between items-center mb-6">
                <h3 className="text-2xl font-black text-emerald-900 brand-font">Staff Profile</h3>
-               <button onClick={() => { stopProfileCamera(); setIsProfileModalOpen(false); }} className="text-slate-400 hover:text-rose-500 transition-colors">
+               <button onClick={() => { setIsProfileModalOpen(false); }} className="text-slate-400 hover:text-rose-500 transition-colors">
                   <i className="fas fa-times text-xl"></i>
                </button>
             </div>
@@ -601,45 +520,17 @@ const App: React.FC = () => {
                {/* Profile Image Section */}
                <div className="flex flex-col items-center gap-4">
                   <div className="relative w-32 h-32 group">
-                     <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border-4 border-white shadow-xl">
-                        {isProfileCameraActive ? (
-                           <video ref={profileVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+                     <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 border-4 border-white shadow-xl flex items-center justify-center">
+                        {profileImage ? (
+                           <img src={profileImage} className="w-full h-full object-cover" onError={(e) => { e.currentTarget.src = 'https://via.placeholder.com/128?text=Invalid+URL' }} />
                         ) : (
-                           profileImage ? (
-                              <img src={profileImage} className="w-full h-full object-cover" />
-                           ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300">
-                                 <i className="fas fa-user text-4xl"></i>
-                              </div>
-                           )
+                           <div className="w-full h-full flex items-center justify-center text-slate-300">
+                              <i className="fas fa-user text-4xl"></i>
+                           </div>
                         )}
                      </div>
-                     
-                     {!isProfileCameraActive && (
-                        <div className="absolute inset-0 bg-emerald-900/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2 backdrop-blur-[2px]">
-                           <button type="button" onClick={startProfileCamera} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-600 shadow-lg active:scale-95 transition-transform">
-                              <i className="fas fa-camera text-sm"></i>
-                           </button>
-                           <button type="button" onClick={() => profileFileInputRef.current?.click()} className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-emerald-600 shadow-lg active:scale-95 transition-transform">
-                              <i className="fas fa-upload text-sm"></i>
-                           </button>
-                        </div>
-                     )}
-
-                     {isProfileCameraActive && (
-                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex gap-2">
-                           <button type="button" onClick={captureProfilePhoto} className="w-10 h-10 bg-emerald-600 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
-                              <i className="fas fa-check text-xs"></i>
-                           </button>
-                           <button type="button" onClick={stopProfileCamera} className="w-10 h-10 bg-rose-500 text-white rounded-full flex items-center justify-center shadow-lg active:scale-90 transition-transform">
-                              <i className="fas fa-times text-xs"></i>
-                           </button>
-                        </div>
-                     )}
                   </div>
-                  <input type="file" ref={profileFileInputRef} className="hidden" accept="image/*" onChange={handleProfileFileChange} />
-                  <canvas ref={profileCanvasRef} className="hidden" />
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Update Profile Picture</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Update Profile Details</p>
                </div>
 
                <div>
@@ -652,6 +543,18 @@ const App: React.FC = () => {
                     placeholder="Enter nickname"
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
                   />
+               </div>
+
+               <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Profile Image URL</label>
+                  <input 
+                    type="url" 
+                    value={profileImage}
+                    onChange={(e) => setProfileImage(e.target.value)}
+                    placeholder="https://example.com/photo.jpg"
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"
+                  />
+                  <p className="text-[9px] text-slate-400 mt-2 font-medium">Provide a direct link to an image (e.g., from Imgur or your social profile).</p>
                </div>
 
                <div className="pt-4">
