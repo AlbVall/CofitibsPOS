@@ -194,7 +194,6 @@ const EventPOSView: React.FC<EventPOSViewProps> = ({
              {showCartMobile && <button onClick={() => setShowCartMobile(false)} className="w-10 h-10 bg-slate-50 rounded-xl text-slate-400 flex items-center justify-center"><i className="fas fa-chevron-left"></i></button>}
              <h2 className="text-xl font-black text-emerald-900 brand-font">Event Order</h2>
            </div>
-           <button onClick={() => setCart([])} className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all hover:bg-rose-50"><i className="fas fa-trash-can"></i></button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar">

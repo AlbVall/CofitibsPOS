@@ -7,7 +7,6 @@ import {
 import { 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
-  sendEmailVerification,
   GoogleAuthProvider,
   signInWithPopup
 } from '@firebase/auth';
@@ -32,8 +31,8 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
       } else {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(userCredential.user);
+        await createUserWithEmailAndPassword(auth, email, password);
+        // Email verification requirement removed as per request
       }
     } catch (err: any) {
       console.error(err);
@@ -48,72 +47,19 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
     setLoading(true);
     try {
       const provider = new GoogleAuthProvider();
-      // Optional: Force account selection
       provider.setCustomParameters({ prompt: 'select_account' });
       await signInWithPopup(auth, provider);
     } catch (err: any) {
-      console.error(err);
-      if (err.code !== 'auth/popup-closed-by-user') {
+      console.error('Google Auth Error:', err);
+      if (err.code === 'auth/unauthorized-domain') {
+        setError('DOMAIN NOT AUTHORIZED: You must add this URL to your Firebase Console > Authentication > Settings > Authorized Domains list.');
+      } else if (err.code !== 'auth/popup-closed-by-user') {
         setError(err.message.replace('Firebase:', ''));
       }
     } finally {
       setLoading(false);
     }
   };
-
-  const resendVerification = async () => {
-    if (user) {
-      setLoading(true);
-      try {
-        await sendEmailVerification(user);
-        alert('Verification email resent!');
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
-  // If user is logged in but not verified
-  if (user && !user.emailVerified) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#fbfcfd] p-6">
-        <div className="bg-white w-full max-w-md p-10 rounded-[3rem] border border-slate-100 shadow-2xl text-center">
-          <div className="w-20 h-20 bg-emerald-50 text-emerald-600 rounded-[2rem] flex items-center justify-center mx-auto mb-8">
-            <i className="fas fa-envelope-open-text text-3xl"></i>
-          </div>
-          <h2 className="text-2xl font-black text-emerald-900 brand-font mb-4">Check your email</h2>
-          <p className="text-slate-500 text-sm leading-relaxed mb-8">
-            We've sent a verification link to <span className="font-bold text-slate-800">{user.email}</span>. 
-            Please verify your account to access the POS terminal.
-          </p>
-          
-          <div className="space-y-4">
-            <button 
-              onClick={() => window.location.reload()}
-              className="w-full py-4 bg-emerald-600 text-white rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg shadow-emerald-100 active:scale-95 transition-all"
-            >
-              I've Verified My Email
-            </button>
-            <button 
-              onClick={resendVerification}
-              disabled={loading}
-              className="w-full py-3 text-emerald-600 font-bold text-xs uppercase tracking-widest hover:bg-emerald-50 rounded-xl transition-all"
-            >
-              {loading ? 'Sending...' : 'Resend Link'}
-            </button>
-            <button 
-              onClick={() => logOut()}
-              className="w-full py-3 text-slate-400 font-bold text-xs uppercase tracking-widest hover:text-rose-500 transition-all"
-            >
-              Back to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#fbfcfd] p-6">
@@ -178,9 +124,22 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             </div>
 
             {error && (
-              <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex items-center gap-3">
-                <i className="fas fa-circle-exclamation text-rose-500 text-sm"></i>
-                <p className="text-[10px] font-bold text-rose-600 uppercase leading-tight">{error}</p>
+              <div className="p-4 bg-rose-50 rounded-2xl border border-rose-100 flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <i className="fas fa-circle-exclamation text-rose-500 text-sm"></i>
+                  <p className="text-[10px] font-black text-rose-600 uppercase leading-tight">{error.includes('DOMAIN') ? 'Config Required' : 'Error'}</p>
+                </div>
+                <p className="text-[10px] text-rose-500/80 font-bold leading-normal">{error}</p>
+                {error.includes('DOMAIN') && (
+                  <a 
+                    href="https://firebase.google.com/docs/auth/web/google-signin#before_you_begin" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-[9px] font-black text-emerald-600 underline uppercase tracking-widest mt-1"
+                  >
+                    View Setup Guide
+                  </a>
+                )}
               </div>
             )}
 
@@ -200,7 +159,6 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             </button>
           </form>
 
-          {/* Social Divider */}
           <div className="relative my-8">
             <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100"></span></div>
             <div className="relative flex justify-center text-[9px] uppercase font-black tracking-[0.2em] text-slate-300">
@@ -208,7 +166,6 @@ const AuthView: React.FC<AuthViewProps> = ({ user }) => {
             </div>
           </div>
 
-          {/* Google Sign In Button */}
           <button 
             type="button"
             onClick={handleGoogleSignIn}

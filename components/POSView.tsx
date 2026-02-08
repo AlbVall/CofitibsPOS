@@ -184,13 +184,6 @@ const POSView: React.FC<POSViewProps> = ({
             )}
             <h2 className="text-2xl font-black text-emerald-900 brand-font tracking-tight">Basket</h2>
           </div>
-          <button 
-            onClick={clearCart}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 hover:bg-rose-50 transition-all"
-            title="Clear Order"
-          >
-            <i className="fas fa-trash-can text-sm"></i>
-          </button>
         </div>
 
         {/* Cart Items List */}
@@ -240,7 +233,7 @@ const POSView: React.FC<POSViewProps> = ({
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">Customer Identification</label>
             <input 
               type="text" 
-              placeholder="Enter name (e.g., John Doe)" 
+              placeholder="Enter name" 
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
               className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl text-sm font-bold focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/5 transition-all outline-none"

@@ -22,6 +22,7 @@ export interface Order {
   type: 'normal' | 'event';
   createdBy?: string;
   completedBy?: string;
+  archived?: boolean;
 }
 
 export interface InventoryLog {
@@ -39,4 +40,4 @@ export interface EventConfig {
   isActive: boolean;
 }
 
-export type View = 'pos' | 'event' | 'inventory' | 'history' | 'queue';
+export type View = 'pos' | 'event' | 'inventory' | 'history' | 'queue' | 'insights';

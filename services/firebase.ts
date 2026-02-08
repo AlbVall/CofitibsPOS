@@ -18,7 +18,8 @@ import {
   signOut, 
   sendEmailVerification,
   onAuthStateChanged,
-  User
+  User,
+  updateProfile
 } from '@firebase/auth';
 import { Product, Order, EventConfig } from "../types";
 
@@ -53,6 +54,12 @@ export const logOut = async () => {
     await signOut(auth);
   } catch (error) {
     console.error("Logout Error:", error);
+  }
+};
+
+export const updateStaffProfile = async (displayName: string, photoURL: string) => {
+  if (auth.currentUser) {
+    await updateProfile(auth.currentUser, { displayName, photoURL });
   }
 };
 
