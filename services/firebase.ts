@@ -16,11 +16,16 @@ import {
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signOut, 
-  sendEmailVerification,
   onAuthStateChanged,
   User,
   updateProfile
 } from '@firebase/auth';
+import {
+  getStorage,
+  ref,
+  uploadString,
+  getDownloadURL
+} from '@firebase/storage';
 import { Product, Order, EventConfig } from "../types";
 
 const firebaseConfig = {
@@ -37,13 +42,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+const storage = getStorage(app);
 
 let analytics: any = null;
 isSupported().then(supported => {
   if (supported) analytics = getAnalytics(app);
 });
 
-export { db, auth, analytics };
+export { db, auth, analytics, storage };
 
 // Auth Helpers
 export { onAuthStateChanged };
@@ -57,10 +63,29 @@ export const logOut = async () => {
   }
 };
 
-export const updateStaffProfile = async (displayName: string, photoURL: string) => {
-  if (auth.currentUser) {
-    await updateProfile(auth.currentUser, { displayName, photoURL });
+/**
+ * Updates the staff profile.
+ * If photoData is a base64/data URL, it uploads it to Firebase Storage first.
+ * Each user has one file at avatars/{userId}, so uploads overwrite the old one.
+ */
+export const updateStaffProfile = async (displayName: string, photoData: string) => {
+  if (!auth.currentUser) return;
+
+  let finalPhotoURL = photoData;
+
+  // Detect if this is new image data (base64) that needs uploading
+  if (photoData && photoData.startsWith('data:')) {
+    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}`);
+    // Extract format and data from the data URL
+    // Format: data:image/jpeg;base64,...
+    await uploadString(storageRef, photoData, 'data_url');
+    finalPhotoURL = await getDownloadURL(storageRef);
   }
+
+  await updateProfile(auth.currentUser, { 
+    displayName, 
+    photoURL: finalPhotoURL 
+  });
 };
 
 // Firestore Helpers

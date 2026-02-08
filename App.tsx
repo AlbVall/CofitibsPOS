@@ -51,6 +51,28 @@ const App: React.FC = () => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [customerName, setCustomerName] = useState('');
 
+  // Utility: Resize image to thumbnail. Since we use Firebase Storage now,
+  // we can afford a slightly higher quality and size than the Auth limit allowed.
+  const resizeToThumbnail = (dataUrl: string, size: number = 256): Promise<string> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const minDim = Math.min(img.width, img.height);
+          const sx = (img.width - minDim) / 2;
+          const sy = (img.height - minDim) / 2;
+          ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+        }
+        resolve(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.src = dataUrl;
+    });
+  };
+
   // Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -124,10 +146,9 @@ const App: React.FC = () => {
     const totalQty = items.reduce((sum, item) => sum + item.quantity, 0);
     const orderType: 'normal' | 'event' = activeView === 'event' ? 'event' : 'normal';
     
-    // Identity logic: Use Nickname (displayName) if set, otherwise Email
     const userDisplayName = auth.currentUser?.displayName;
     const userEmail = auth.currentUser?.email;
-    const identifier = userDisplayName && userDisplayName.trim() !== '' ? userDisplayName : (userEmail || 'Unknown');
+    const identifier = (userDisplayName && userDisplayName.trim().length > 0) ? userDisplayName.trim() : (userEmail || 'Unknown Staff');
 
     const newOrder: Order = {
       id: Math.random().toString(36).substr(2, 9).toUpperCase(),
@@ -162,10 +183,9 @@ const App: React.FC = () => {
   const handleCompleteOrder = (orderId: string) => {
     const order = orders.find(o => o.id === orderId);
     if (order && db) {
-      // Identity logic: Use Nickname (displayName) if set, otherwise Email
       const userDisplayName = auth.currentUser?.displayName;
       const userEmail = auth.currentUser?.email;
-      const identifier = userDisplayName && userDisplayName.trim() !== '' ? userDisplayName : (userEmail || 'Unknown');
+      const identifier = (userDisplayName && userDisplayName.trim().length > 0) ? userDisplayName.trim() : (userEmail || 'Unknown Staff');
 
       saveOrderToCloud({ 
         ...order, 
@@ -215,16 +235,17 @@ const App: React.FC = () => {
     setIsProfileSaving(true);
     try {
       if (auth.currentUser) {
-        await updateStaffProfile(profileName, profileImage);
-        // Reload the user to ensure auth.currentUser has the latest data
+        const cleanName = profileName.trim();
+        // updateStaffProfile now handles the Storage upload internally
+        await updateStaffProfile(cleanName, profileImage);
+        
         await auth.currentUser.reload();
-        // Update local state to trigger UI refresh
         setUser({ ...auth.currentUser } as User);
+        setIsProfileModalOpen(false);
       }
-      setIsProfileModalOpen(false);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Profile Save Error:", err);
-      alert("Failed to update profile. Please try again.");
+      alert(`Error updating profile: ${err.message || "Unknown error"}`);
     } finally {
       setIsProfileSaving(false);
     }
@@ -243,6 +264,7 @@ const App: React.FC = () => {
     } catch (err) {
       console.error("Camera access denied:", err);
       setIsProfileCameraActive(false);
+      alert("Please allow camera access to take a profile photo.");
     }
   };
 
@@ -255,16 +277,19 @@ const App: React.FC = () => {
     setIsProfileCameraActive(false);
   };
 
-  const captureProfilePhoto = () => {
+  const captureProfilePhoto = async () => {
     if (profileVideoRef.current && profileCanvasRef.current) {
       const video = profileVideoRef.current;
       const canvas = profileCanvasRef.current;
       const context = canvas.getContext('2d');
+      
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       context?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const rawData = canvas.toDataURL('image/jpeg', 0.7);
-      setProfileImage(rawData);
+      const rawData = canvas.toDataURL('image/jpeg', 0.9);
+      
+      const thumbnail = await resizeToThumbnail(rawData, 256);
+      setProfileImage(thumbnail);
       stopProfileCamera();
     }
   };
@@ -273,8 +298,9 @@ const App: React.FC = () => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setProfileImage(reader.result as string);
+      reader.onloadend = async () => {
+        const thumbnail = await resizeToThumbnail(reader.result as string, 256);
+        setProfileImage(thumbnail);
       };
       reader.readAsDataURL(file);
     }
@@ -284,7 +310,6 @@ const App: React.FC = () => {
     return orders.filter(o => {
       if (o.status !== 'done') return false;
       
-      // Filter by Archive State
       const isArchived = o.archived === true;
       if (showArchived !== isArchived) return false;
 
